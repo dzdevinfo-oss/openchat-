@@ -62,7 +62,7 @@ If you are using Termux to push these changes to GitHub, follow these exact step
    Run these commands to ensure the correct files are present and executable:
    ```bash
    mkdir -p gradle/wrapper
-   curl -L https://github.com/gradle/gradle/raw/v8.6.0/gradle/wrapper/gradle-wrapper.jar -o gradle/wrapper/gradle-wrapper.jar
+   curl -L https://github.com/gradle/gradle/raw/v8.7.0/gradle/wrapper/gradle-wrapper.jar -o gradle/wrapper/gradle-wrapper.jar
    chmod +x gradlew
    # Tell Git to track the executable bit (CRITICAL for GitHub Actions)
    git update-index --chmod=+x gradlew
@@ -92,7 +92,7 @@ I have switched the GitHub Action to use the official **Setup Gradle** action wh
 #### "Minimum supported Gradle version is 8.4. Current version is 7.4.2."
 If you see this error in Android Studio or terminal:
 1. Ensure you are opening the **root folder** (the one containing `settings.gradle.kts`).
-2. Make sure `gradle/wrapper/gradle-wrapper.properties` has `distributionUrl=...gradle-8.6-bin.zip`.
+2. Make sure `gradle/wrapper/gradle-wrapper.properties` has `distributionUrl=...gradle-8.7-bin.zip`.
 3. In Android Studio, go to **File > Settings > Build, Execution, Deployment > Gradle** and set "Gradle JDK" to **JDK 17**.
 4. If building from terminal, always use `./gradlew assembleDebug` (Linux/Mac) or `gradlew.bat assembleDebug` (Windows) to ensure the correct version is used.
 
