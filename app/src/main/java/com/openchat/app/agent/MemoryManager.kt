@@ -106,42 +106,37 @@ class MemoryManager @Inject constructor(
 
                 val response = service.chatCompletions(request)
                 if (response.isSuccessful) {
-                    val responseStr = response.body()?.string() ?: return@launch
-                    val jsonResponse = JSONObject(responseStr)
-                    val choices = jsonResponse.optJSONArray("choices") ?: return@launch
-                    if (choices.length() > 0) {
-                        val messageObj = choices.getJSONObject(0).optJSONObject("message")
-                        var content = messageObj?.optString("content") ?: ""
-                        
-                        // Clean up possible markdown wrapper
-                        content = content.trim()
-                        if (content.startsWith("```json")) {
-                            content = content.removePrefix("```json")
-                            content = content.removeSuffix("```")
-                        } else if (content.startsWith("```")) {
-                            content = content.removePrefix("```")
-                            content = content.removeSuffix("```")
-                        }
-                        content = content.trim()
+                    val chatResponse = response.body() ?: return@launch
+                    var content = chatResponse.choices.firstOrNull()?.message?.content ?: ""
+                    
+                    // Clean up possible markdown wrapper
+                    content = content.trim()
+                    if (content.startsWith("```json")) {
+                        content = content.removePrefix("```json")
+                        content = content.removeSuffix("```")
+                    } else if (content.startsWith("```")) {
+                        content = content.removePrefix("```")
+                        content = content.removeSuffix("```")
+                    }
+                    content = content.trim()
 
-                        try {
-                            val jsonArray = JSONArray(content)
-                            for (i in 0 until jsonArray.length()) {
-                                val obj = jsonArray.getJSONObject(i)
-                                val fact = obj.optString("fact")
-                                val important = obj.optBoolean("important", false)
-                                
-                                if (fact.isNotBlank()) {
-                                    val memory = Memory(
-                                        content = fact,
-                                        isActive = true
-                                    )
-                                    memoryDao.insert(memory)
-                                }
+                    try {
+                        val jsonArray = JSONArray(content)
+                        for (i in 0 until jsonArray.length()) {
+                            val obj = jsonArray.getJSONObject(i)
+                            val fact = obj.optString("fact")
+                            val important = obj.optBoolean("important", false)
+                            
+                            if (fact.isNotBlank()) {
+                                val memory = Memory(
+                                    content = fact,
+                                    isActive = true
+                                )
+                                memoryDao.insert(memory)
                             }
-                        } catch (e: Exception) {
-                            e.printStackTrace()
                         }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
                     }
                 }
             } catch (e: Exception) {
