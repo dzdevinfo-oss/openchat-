@@ -30,4 +30,7 @@ interface SessionDao {
 
     @Query("SELECT * FROM sessions WHERE isPinned = 1 ORDER BY updatedAt DESC")
     fun getPinned(): Flow<List<Session>>
+
+    @Query("DELETE FROM sessions")
+    suspend fun deleteAll()
 }

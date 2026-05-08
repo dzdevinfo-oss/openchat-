@@ -74,4 +74,9 @@ class ChatRepository @Inject constructor(
             }
         }
     }
+
+    suspend fun clearAll() {
+        messageDao.deleteAll()
+        sessionDao.deleteAll()
+    }
 }

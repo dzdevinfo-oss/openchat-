@@ -36,4 +36,7 @@ interface WorkspaceFileDao {
 
     @Query("SELECT * FROM workspace_files WHERE sessionId = :sessionId AND isDeleted = 1 ORDER BY updatedAt DESC")
     fun getDeletedBySession(sessionId: String): Flow<List<WorkspaceFile>>
+
+    @Query("DELETE FROM workspace_files")
+    suspend fun deleteAll()
 }

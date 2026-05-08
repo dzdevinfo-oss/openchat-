@@ -15,6 +15,8 @@ import javax.inject.Inject
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val providerRepository: ProviderRepository,
+    private val chatRepository: com.openchat.app.data.repository.ChatRepository,
+    private val workspaceRepository: com.openchat.app.data.repository.WorkspaceRepository,
     private val memoryManager: com.openchat.app.agent.MemoryManager,
     private val voiceInputManager: com.openchat.app.util.VoiceInputManager,
     private val settingsManager: com.openchat.app.util.SettingsManager
@@ -213,8 +215,8 @@ class SettingsViewModel @Inject constructor(
 
     fun clearAllHistory() {
         viewModelScope.launch {
-            // chatRepository.clearAll()
-            // workspaceRepository.clearAll()
+            chatRepository.clearAll()
+            workspaceRepository.clearAll(settingsManager.context)
         }
     }
 

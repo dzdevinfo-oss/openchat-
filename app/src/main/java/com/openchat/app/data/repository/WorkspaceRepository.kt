@@ -93,4 +93,12 @@ class WorkspaceRepository @Inject constructor(
             workspaceFileDao.permanentDelete(id)
         }
     }
+
+    suspend fun clearAll(context: android.content.Context) {
+        workspaceFileDao.deleteAll()
+        val workspaceDir = File(context.filesDir, "workspaces")
+        if (workspaceDir.exists()) {
+            workspaceDir.deleteRecursively()
+        }
+    }
 }
