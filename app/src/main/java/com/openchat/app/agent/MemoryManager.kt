@@ -107,7 +107,7 @@ class MemoryManager @Inject constructor(
                 val response = service.chatCompletions(request)
                 if (response.isSuccessful) {
                     val chatResponse = response.body() ?: return@launch
-                    var content = chatResponse.choices.firstOrNull()?.message?.content ?: ""
+                    var content = chatResponse.choices.firstOrNull()?.message?.content?.toString() ?: ""
                     
                     // Clean up possible markdown wrapper
                     content = content.trim()

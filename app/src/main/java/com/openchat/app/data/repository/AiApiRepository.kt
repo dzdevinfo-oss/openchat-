@@ -113,7 +113,7 @@ class AiApiRepository @Inject constructor(
 
         val response = service.chatCompletions(request)
         if (response.isSuccessful) {
-            response.body()?.choices?.firstOrNull()?.message?.content ?: throw Exception("Empty response")
+            response.body()?.choices?.firstOrNull()?.message?.content?.toString() ?: throw Exception("Empty response")
         } else {
             throw Exception("API Error: ${response.code()}")
         }
