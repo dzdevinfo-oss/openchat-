@@ -246,7 +246,7 @@ class ChatViewModel @Inject constructor(
                                 chatRepository.updateMessage(assistantMessage.copy(content = fullContent, thinkingContent = fullThinking, isStreaming = false))
                                 _isStreaming.value = false
                                 memoryManager.extractMemoriesAsync(contextMessages + assistantMessage.copy(content = fullContent), provider, model)
-                                if (voiceInputManager.enableTts.first()) {
+                                if (voiceInputManager.autoReadResponses.first()) {
                                     voiceInputManager.speak(fullContent.replace(Regex("```[\\s\\S]*?```"), "Code block skipped"), voiceInputManager.ttsSpeed.first(), voiceInputManager.ttsPitch.first())
                                 }
                             }

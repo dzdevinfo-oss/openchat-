@@ -117,7 +117,7 @@ class AgentManager @Inject constructor(
                             }
                             is Action.EditFile -> {
                                 // Find id by name
-                                val files = kotlinx.coroutines.flow.first(workspaceRepository.getFilesBySessionId(sessionId))
+                                val files = workspaceRepository.getFilesBySessionId(sessionId).first()
                                 val file = files.find { it.fileName == action.name }
                                 if (file != null) {
                                     workspaceRepository.updateFileContent(file.id, action.content)

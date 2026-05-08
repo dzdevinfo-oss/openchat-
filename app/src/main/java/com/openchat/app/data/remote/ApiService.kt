@@ -13,7 +13,7 @@ interface ApiService {
     suspend fun streamChatCompletions(@Body request: ChatRequest): Response<ResponseBody>
 
     @POST("chat/completions")
-    suspend fun chatCompletions(@Body request: ChatRequest): Response<ResponseBody>
+    suspend fun chatCompletions(@Body request: ChatRequest): Response<ChatResponse>
 
     @GET("models")
     suspend fun getModels(): Response<ModelListResponse>

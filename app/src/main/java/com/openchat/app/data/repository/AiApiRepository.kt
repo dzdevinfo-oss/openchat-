@@ -5,6 +5,7 @@ import com.openchat.app.data.model.ApiProvider
 import com.openchat.app.data.model.Message
 import com.openchat.app.data.remote.ChatMessage
 import com.openchat.app.data.remote.ChatRequest
+import com.openchat.app.data.remote.ChatResponse
 import com.openchat.app.data.remote.RetrofitBuilder
 import com.openchat.app.data.remote.StreamEvent
 import com.openchat.app.data.remote.StreamingParser
