@@ -26,9 +26,8 @@ jobs:
 
       - name: Ensure Gradle Wrapper
         run: |
-          if [ ! -f "gradle/wrapper/gradle-wrapper.jar" ]; then
-            echo "Gradle wrapper jar missing, downloading..."
-            mkdir -p gradle/wrapper
+          mkdir -p gradle/wrapper
+          if [ ! -s "gradle/wrapper/gradle-wrapper.jar" ]; then
             curl -L https://github.com/gradle/gradle/raw/v8.4.0/gradle/wrapper/gradle-wrapper.jar -o gradle/wrapper/gradle-wrapper.jar
           fi
 
@@ -73,9 +72,8 @@ jobs:
 
       - name: Ensure Gradle Wrapper
         run: |
-          if [ ! -f "gradle/wrapper/gradle-wrapper.jar" ]; then
-            echo "Gradle wrapper jar missing, downloading..."
-            mkdir -p gradle/wrapper
+          mkdir -p gradle/wrapper
+          if [ ! -s "gradle/wrapper/gradle-wrapper.jar" ]; then
             curl -L https://github.com/gradle/gradle/raw/v8.4.0/gradle/wrapper/gradle-wrapper.jar -o gradle/wrapper/gradle-wrapper.jar
           fi
 
