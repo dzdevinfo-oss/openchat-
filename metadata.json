@@ -1,0 +1,5 @@
+{
+  "name": "OpenChat",
+  "description": "A production-grade, native Android AI IDE with workspace and agentic capabilities.",
+  "requestFramePermissions": ["camera", "microphone"]
+}

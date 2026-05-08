@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">OpenChat</string>
+    <style name="Theme.OpenChat" parent="android:Theme.Material.Light.NoActionBar" />
+</resources>
