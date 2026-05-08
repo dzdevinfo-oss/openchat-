@@ -58,12 +58,14 @@ If you are using Termux to push these changes to GitHub, follow these exact step
    cd /path/to/your/project
    ```
 
-2. **Fix the local Gradle wrapper (IMPORTANT):**
-   Run these commands to ensure the correct files are present locally:
+2. **Fix the local Gradle wrapper and Permissions (IMPORTANT):**
+   Run these commands to ensure the correct files are present and executable:
    ```bash
    mkdir -p gradle/wrapper
    curl -L https://github.com/gradle/gradle/raw/v8.4.0/gradle/wrapper/gradle-wrapper.jar -o gradle/wrapper/gradle-wrapper.jar
    chmod +x gradlew
+   # Tell Git to track the executable bit (CRITICAL for GitHub Actions)
+   git update-index --chmod=+x gradlew
    ```
 
 3. **Stage and Push:**
@@ -74,7 +76,7 @@ If you are using Termux to push these changes to GitHub, follow these exact step
    git add -f app/src/main/res/drawable/ic_launcher_foreground.xml
    git add -f app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml
    git add -f app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml
-   git commit -m "Fix: Add missing launcher icons and ensure Gradle wrapper jar"
+   git commit -m "Fix: Add missing icons and ensure gradlew executable bit"
    git push origin main
    ```
 
