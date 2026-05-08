@@ -17,8 +17,11 @@ class TerminalExecutor @Inject constructor(
         if (!exists()) mkdirs()
     }
 
-    suspend fun execute(command: String): String = withContext(Dispatchers.IO) {
+    suspend fun execute(command: String, dir: File? = null): String = withContext(Dispatchers.IO) {
         try {
+            val targetDir = dir ?: workingDir
+            if (!targetDir.exists()) targetDir.mkdirs()
+
             // Very simple tokenization for the process builder
             val commandParts = if (command.startsWith("bash -c ")) {
                 listOf("bash", "-c", command.removePrefix("bash -c "))
@@ -29,7 +32,7 @@ class TerminalExecutor @Inject constructor(
             }
 
             val process = ProcessBuilder(commandParts)
-                .directory(workingDir)
+                .directory(targetDir)
                 .redirectErrorStream(true) // Combine stdout and stderr
                 .start()
 

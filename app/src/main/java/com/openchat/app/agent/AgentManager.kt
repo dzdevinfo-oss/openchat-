@@ -73,7 +73,33 @@ class AgentManager @Inject constructor(
                         provider = provider,
                         model = model,
                         chatMessages = chatMsgs,
-                        systemPrompt = "You are an autonomous agent. Accomplish the user's task. Output actions in strictly formatted Markdown blocks like ```action:create_file\\n{\"name\":\"file.ext\",\"content\":\"...\"}```. Other actions: edit_file, terminal, task_complete. Keep non-action thinking concise.",
+                        systemPrompt = """
+                            You are an autonomous AI IDE agent with complete access to the user's workspace.
+                            Your goal is to accomplish the user's task by managing files, executing terminal commands, and coordinating actions.
+                            
+                            You MUST follow these rules:
+                            1. Be persistent: Files you create in a session stay there unless specifically deleted.
+                            2. Use existing files: If a file exists, use 'edit_file' to update it in place instead of creating a new one.
+                            3. Manage structure: You can use relative paths (e.g., 'src/main/main.kt') in filenames.
+                            4. Verify your work: Use 'list_files' or 'read_file' to see what you've done.
+                            5. Think before you act: Keep your non-action thoughts concise.
+                            6. Output actions in strictly formatted Markdown blocks.
+                            
+                            Available Actions:
+                            - ```action:create_file\n{"name":"file.ext", "content":"..."}``` - Create a new file.
+                            - ```action:edit_file\n{"name":"file.ext", "content":"..."}``` - Update an existing file's full content in-place.
+                            - ```action:read_file\n{"name":"file.ext"}``` - Read a file's content.
+                            - ```action:list_files\n{"path":"."}``` - List files and directories in a path.
+                            - ```action:delete_file\n{"name":"file.ext"}``` - Soft delete a file.
+                            - ```action:restore_file\n{"name":"file.ext"}``` - Restore a deleted file.
+                            - ```action:undo_edit\n{"name":"file.ext"}``` - Revert the last edit to a file.
+                            - ```action:redo_edit\n{"name":"file.ext"}``` - Re-apply the last undone edit.
+                            - ```action:create_directory\n{"name":"dir_name"}``` - Create a new directory.
+                            - ```action:terminal\n{"command":"..."}``` - Execute a terminal command.
+                            - ```action:task_complete\n{"summary":"..."}``` - Mark the task as done.
+                            
+                            Always prefer direct file updates to maintain a clean codebase.
+                        """.trimIndent(),
                         sessionId = sessionId,
                         onToken = { token -> aiResponse += token },
                         onThinking = { },
@@ -92,10 +118,14 @@ class AgentManager @Inject constructor(
 
                     val actions = actionParser.parse(aiResponse)
                     if (actions.isEmpty()) {
-                        // AI didn't format an action, prompt it again
-                        val nudgeMsg = Message(sessionId = sessionId, role = "user", content = "No valid actions found in your response. Please formulate your action using the action markdown blocks, or use [TASK_COMPLETE] if done.")
-                        chatRepository.insertMessage(nudgeMsg)
-                        sessionMessages.add(nudgeMsg)
+                        // AI didn't format an action, prompt it again if it didn't say complete
+                        if (!aiResponse.contains("[TASK_COMPLETE]", ignoreCase = true)) {
+                            val nudgeMsg = Message(sessionId = sessionId, role = "user", content = "No valid action blocks found. Please use the markdown action format or use task_complete action.")
+                            chatRepository.insertMessage(nudgeMsg)
+                            sessionMessages.add(nudgeMsg)
+                        } else {
+                            isComplete = true
+                        }
                         continue
                     }
 
@@ -116,19 +146,81 @@ class AgentManager @Inject constructor(
                                 results.add("File ${action.name} created successfully.")
                             }
                             is Action.EditFile -> {
-                                // Find id by name
                                 val files = workspaceRepository.getFilesBySessionId(sessionId).first()
                                 val file = files.find { it.fileName == action.name }
                                 if (file != null) {
                                     workspaceRepository.updateFileContent(file.id, action.content)
-                                    results.add("File ${action.name} edited successfully.")
+                                    results.add("File ${action.name} updated successfully.")
                                 } else {
-                                    results.add("File ${action.name} not found.")
+                                    results.add("Error: File ${action.name} does not exist. Use create_file instead.")
+                                }
+                            }
+                            is Action.ReadFile -> {
+                                val files = workspaceRepository.getFilesBySessionId(sessionId).first()
+                                val file = files.find { it.fileName == action.name }
+                                if (file != null) {
+                                    results.add("Content of ${action.name}:\n${file.content}")
+                                } else {
+                                    results.add("Error: File ${action.name} not found.")
+                                }
+                            }
+                            is Action.ListFiles -> {
+                                val files = workspaceRepository.getFilesBySessionId(sessionId).first()
+                                val fileList = files.filter { !it.isDeleted }
+                                    .joinToString("\n") { "- ${it.fileName} (${it.fileType})" }
+                                results.add(if (fileList.isEmpty()) "Workspace is empty." else "Files in workspace:\n$fileList")
+                            }
+                            is Action.DeleteFile -> {
+                                val files = workspaceRepository.getFilesBySessionId(sessionId).first()
+                                val file = files.find { it.fileName == action.name }
+                                if (file != null) {
+                                    workspaceRepository.softDeleteFile(file.id)
+                                    results.add("File ${action.name} deleted.")
+                                } else {
+                                    results.add("Error: File ${action.name} not found.")
+                                }
+                            }
+                            is Action.RestoreFile -> {
+                                val files = workspaceRepository.getDeletedFilesBySessionId(sessionId).first()
+                                val file = files.find { it.fileName == action.name }
+                                if (file != null) {
+                                    workspaceRepository.recoverDeletedFile(file.id)
+                                    results.add("File ${action.name} restored.")
+                                } else {
+                                    results.add("Error: No deleted file found named ${action.name}.")
+                                }
+                            }
+                            is Action.UndoEdit -> {
+                                val files = workspaceRepository.getFilesBySessionId(sessionId).first()
+                                val file = files.find { it.fileName == action.name }
+                                if (file != null) {
+                                    workspaceRepository.undoLastEdit(file.id)
+                                    results.add("Last edit to ${action.name} undone.")
+                                } else {
+                                    results.add("Error: File ${action.name} not found.")
+                                }
+                            }
+                            is Action.RedoEdit -> {
+                                val files = workspaceRepository.getFilesBySessionId(sessionId).first()
+                                val file = files.find { it.fileName == action.name }
+                                if (file != null) {
+                                    workspaceRepository.undoLastEdit(file.id) // Same swap logic
+                                    results.add("Redo applied to ${action.name}.")
+                                } else {
+                                    results.add("Error: File ${action.name} not found.")
+                                }
+                            }
+                            is Action.CreateDirectory -> {
+                                val dir = File(context.filesDir, "workspace/$sessionId/${action.name}")
+                                if (dir.mkdirs() || dir.exists()) {
+                                    results.add("Directory ${action.name} created/verified.")
+                                } else {
+                                    results.add("Error: Could not create directory ${action.name}.")
                                 }
                             }
                             is Action.TerminalCommand -> {
-                                val out = terminalExecutor.execute(action.command)
-                                results.add("Terminal out: $out")
+                                val out = terminalExecutor.execute(action.command, File(context.filesDir, "workspace/$sessionId"))
+                                results.add("Terminal out:\n$out")
                             }
                             is Action.TaskComplete -> {
                                 results.add("Task marked complete: ${action.summary}")
