@@ -14,6 +14,8 @@ sealed class Action {
     data class UndoEdit(val name: String) : Action()
     data class RedoEdit(val name: String) : Action()
     data class CreateDirectory(val name: String) : Action()
+    data class SearchFiles(val query: String) : Action()
+    data class GetAppInfo(val query: String = "general") : Action()
     data class TerminalCommand(val command: String) : Action()
     data class TaskComplete(val summary: String) : Action()
     data class InvalidCommand(val reason: String) : Action()
@@ -80,6 +82,16 @@ class ActionParser @Inject constructor() {
                     "create_directory" -> {
                         Action.CreateDirectory(
                             name = json.getString("name")
+                        )
+                    }
+                    "search_files" -> {
+                        Action.SearchFiles(
+                            query = json.getString("query")
+                        )
+                    }
+                    "get_app_info" -> {
+                        Action.GetAppInfo(
+                            query = if (json.has("query")) json.getString("query") else "general"
                         )
                     }
                     "terminal" -> {

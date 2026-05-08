@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import java.util.concurrent.ConcurrentHashMap
+import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -95,6 +96,8 @@ class AgentManager @Inject constructor(
                             - ```action:undo_edit\n{"name":"file.ext"}``` - Revert the last edit to a file.
                             - ```action:redo_edit\n{"name":"file.ext"}``` - Re-apply the last undone edit.
                             - ```action:create_directory\n{"name":"dir_name"}``` - Create a new directory.
+                            - ```action:search_files\n{"query":"text"}``` - Search for text/files in the workspace.
+                            - ```action:get_app_info\n{"query":"all"}``` - Get information about the app environment, permissions, and status.
                             - ```action:terminal\n{"command":"..."}``` - Execute a terminal command.
                             - ```action:task_complete\n{"summary":"..."}``` - Mark the task as done.
                             
@@ -217,6 +220,26 @@ class AgentManager @Inject constructor(
                                 } else {
                                     results.add("Error: Could not create directory ${action.name}.")
                                 }
+                            }
+                            is Action.SearchFiles -> {
+                                val files = workspaceRepository.getFilesBySessionId(sessionId).first()
+                                val matched = files.filter { 
+                                    it.fileName.contains(action.query, ignoreCase = true) || 
+                                    it.content.contains(action.query, ignoreCase = true)
+                                }.joinToString("\n") { "- ${it.fileName}" }
+                                results.add(if (matched.isEmpty()) "No matches found for '${action.query}'." else "Search results for '${action.query}':\n$matched")
+                            }
+                            is Action.GetAppInfo -> {
+                                val info = """
+                                    App Name: OpenChat
+                                    Version: 1.0.0
+                                    OS: Android (API ${android.os.Build.VERSION.SDK_INT})
+                                    Workspace Path: /data/user/0/com.openchat.app/files/workspace/$sessionId
+                                    Storage: Local persistence (Room + DataStore)
+                                    UI: Jetpack Compose
+                                    AI Access Level: Full (File System, Terminal, Application Memory)
+                                """.trimIndent()
+                                results.add(info)
                             }
                             is Action.TerminalCommand -> {
                                 val out = terminalExecutor.execute(action.command, File(context.filesDir, "workspace/$sessionId"))
