@@ -51,37 +51,53 @@ The repository is configured with GitHub Actions to automate builds:
 
 ### 6. Pushing Changes from Termux (Mobile)
 
-If you are using Termux to push these changes to GitHub, follow these exact steps to ensure the build fixes are applied:
+If you are using Termux to push these changes to GitHub, follow these exact steps to ensure the build fixes are applied and the Gradle wrapper is included:
 
 1. **Navigate to the project folder:**
    ```bash
    cd /path/to/your/project
    ```
 
-2. **Add all files (including the newly created Gradle wrapper):**
+2. **Force-add the Gradle wrapper files** (they are sometimes ignored or missed):
+   ```bash
+   git add -f gradlew gradlew.bat gradle/wrapper/gradle-wrapper.jar gradle/wrapper/gradle-wrapper.properties
+   ```
+
+3. **Add everything else:**
    ```bash
    git add .
    ```
 
-3. **Check if `gradlew` and `gradle/wrapper/gradle-wrapper.jar` are included:**
+4. **Check if the files are staged correctly:**
    ```bash
    git status
    ```
-   *You should see `gradlew`, `gradlew.bat`, and `gradle/wrapper/` files in the staging area.*
+   *You MUST see `new file: gradle/wrapper/gradle-wrapper.jar` in the list.*
 
-4. **Commit with a clear message:**
+5. **Commit and Push:**
    ```bash
-   git commit -m "Fix: Add Gradle wrapper and move files to root for GitHub Actions"
+   git commit -m "Fix: Explicitly include Gradle wrapper Jar and scripts"
    ```
-
-5. **Push to your main branch:**
    ```bash
    git push origin main
    ```
 
-Once you push, go to the **Actions** tab on your GitHub repository. You should see a new workflow run starting. If everything is configured correctly, it will now find the `./gradlew` file and build the APK.
-
 ### 7. Troubleshooting Build Errors
+
+#### "Could not find or load main class org.gradle.wrapper.GradleWrapperMain"
+This means the `gradle-wrapper.jar` is missing from your GitHub repository.
+**Solution:**
+I have updated the GitHub Actions workflow to **automatically download** this file if it is missing during the build. However, for local development, you should still run:
+   ```bash
+   mkdir -p gradle/wrapper
+   curl -L https://github.com/gradle/gradle/raw/v8.4.0/gradle/wrapper/gradle-wrapper.jar -o gradle/wrapper/gradle-wrapper.jar
+   ```
+And remember to push it:
+   ```bash
+   git add -f gradle/wrapper/gradle-wrapper.jar
+   git commit -m "Fix: Explicitly include Gradle wrapper jar"
+   git push origin main
+   ```
 
 #### "Minimum supported Gradle version is 8.4. Current version is 7.4.2."
 If you see this error in Android Studio or terminal:
