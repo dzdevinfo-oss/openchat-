@@ -2,6 +2,8 @@ package com.openchat.app.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -428,7 +430,7 @@ fun AgentTerminalView(logs: String) {
             .fillMaxSize()
             .background(androidx.compose.ui.graphics.Color(0xFF121212))
             .padding(12.dp)
-            .androidx.compose.foundation.verticalScroll(scrollState)
+            .verticalScroll(scrollState)
     ) {
         Text(
             text = logs,
