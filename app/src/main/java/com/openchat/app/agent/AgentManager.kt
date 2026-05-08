@@ -46,6 +46,16 @@ class AgentManager @Inject constructor(
     private val _agentSessions = MutableStateFlow<List<String>>(emptyList())
     val agentSessions: StateFlow<List<String>> = _agentSessions
 
+    private val _logs = ConcurrentHashMap<String, MutableStateFlow<String>>()
+    fun getLogs(sessionId: String): StateFlow<String> {
+        return _logs.getOrPut(sessionId) { MutableStateFlow("Agent initialized...\n") }.asStateFlow()
+    }
+
+    private fun appendLog(sessionId: String, text: String) {
+        val flow = _logs.getOrPut(sessionId) { MutableStateFlow("") }
+        flow.value += text + "\n"
+    }
+
     fun launchAgent(sessionId: String, task: String, provider: ApiProvider, model: AiModel) {
         if (activeJobs.containsKey(sessionId)) return
 
@@ -56,14 +66,19 @@ class AgentManager @Inject constructor(
                 var currentIteration = 0
                 var isComplete = false
                 
-                // Add task to messages
-                val sessionMessages = mutableListOf<Message>()
-                val initialMsg = Message(sessionId = sessionId, role = "user", content = task)
-                chatRepository.insertMessage(initialMsg)
-                sessionMessages.add(initialMsg)
+                // Load existing session history
+                val sessionMessages = chatRepository.getMessagesBySessionId(sessionId).first().toMutableList()
+                
+                // If the last message isn't the current task, add it
+                if (sessionMessages.none { it.content == task }) {
+                    val initialMsg = Message(sessionId = sessionId, role = "user", content = task)
+                    chatRepository.insertMessage(initialMsg)
+                    sessionMessages.add(initialMsg)
+                }
 
                 while (currentIteration < 20 && !isComplete) {
                     currentIteration++
+                    appendLog(sessionId, "\n--- TURN $currentIteration ---")
                     
                     var aiResponse = ""
                     var errorMessage: Throwable? = null
@@ -101,6 +116,8 @@ class AgentManager @Inject constructor(
                             - ```action:terminal\n{"command":"..."}``` - Execute a terminal command.
                             - ```action:task_complete\n{"summary":"..."}``` - Mark the task as done.
                             
+                            SELF-IMPROVEMENT: You can explore the application's own source code at `/app`. You have permission to read these files to understand your internal logic or suggest architectural improvements.
+                            
                             Always prefer direct file updates to maintain a clean codebase.
                         """.trimIndent(),
                         sessionId = sessionId,
@@ -119,6 +136,7 @@ class AgentManager @Inject constructor(
                     chatRepository.insertMessage(aiMessage)
                     sessionMessages.add(aiMessage)
 
+                    appendLog(sessionId, "AI Thought: ${aiResponse.substringBefore("```")}")
                     val actions = actionParser.parse(aiResponse)
                     if (actions.isEmpty()) {
                         // AI didn't format an action, prompt it again if it didn't say complete
@@ -137,6 +155,7 @@ class AgentManager @Inject constructor(
                     for (action in actions) {
                         when (action) {
                             is Action.CreateFile -> {
+                                appendLog(sessionId, "Action: Create File -> ${action.name}")
                                 val file = WorkspaceFile(
                                     workspaceId = sessionId,
                                     sessionId = sessionId,
@@ -149,6 +168,7 @@ class AgentManager @Inject constructor(
                                 results.add("File ${action.name} created successfully.")
                             }
                             is Action.EditFile -> {
+                                appendLog(sessionId, "Action: Edit File ${action.name}")
                                 val files = workspaceRepository.getFilesBySessionId(sessionId).first()
                                 val file = files.find { it.fileName == action.name }
                                 if (file != null) {
@@ -160,18 +180,31 @@ class AgentManager @Inject constructor(
                             }
                             is Action.ReadFile -> {
                                 val files = workspaceRepository.getFilesBySessionId(sessionId).first()
-                                val file = files.find { it.fileName == action.name }
-                                if (file != null) {
-                                    results.add("Content of ${action.name}:\n${file.content}")
+                                val repoFile = files.find { it.fileName == action.name }
+                                if (repoFile != null) {
+                                    results.add("Content of ${action.name}:\n${repoFile.content}")
                                 } else {
-                                    results.add("Error: File ${action.name} not found.")
+                                    val diskFile = if (action.name.startsWith("/")) File(action.name)
+                                                 else File(context.filesDir, "workspace/$sessionId/${action.name}")
+                                    if (diskFile.exists() && diskFile.isFile) {
+                                        results.add("Content of ${action.name}:\n${diskFile.readText()}")
+                                    } else {
+                                        results.add("Error: File ${action.name} not found.")
+                                    }
                                 }
                             }
                             is Action.ListFiles -> {
-                                val files = workspaceRepository.getFilesBySessionId(sessionId).first()
-                                val fileList = files.filter { !it.isDeleted }
-                                    .joinToString("\n") { "- ${it.fileName} (${it.fileType})" }
-                                results.add(if (fileList.isEmpty()) "Workspace is empty." else "Files in workspace:\n$fileList")
+                                val dir = if (action.path.startsWith("/")) File(action.path)
+                                         else File(context.filesDir, "workspace/$sessionId/${action.path}")
+                                
+                                if (dir.exists() && dir.isDirectory) {
+                                    val list = dir.listFiles()?.joinToString("\n") { 
+                                        if (it.isDirectory) "[DIR] ${it.name}" else "- ${it.name}"
+                                    } ?: "Empty."
+                                    results.add("Files in ${dir.absolutePath}:\n$list")
+                                } else {
+                                    results.add("Error: Path ${action.path} not found or is not a directory.")
+                                }
                             }
                             is Action.DeleteFile -> {
                                 val files = workspaceRepository.getFilesBySessionId(sessionId).first()
@@ -242,10 +275,13 @@ class AgentManager @Inject constructor(
                                 results.add(info)
                             }
                             is Action.TerminalCommand -> {
+                                appendLog(sessionId, "Action: Run Terminal > ${action.command}")
                                 val out = terminalExecutor.execute(action.command, File(context.filesDir, "workspace/$sessionId"))
                                 results.add("Terminal out:\n$out")
+                                appendLog(sessionId, "Terminal Output: $out")
                             }
                             is Action.TaskComplete -> {
+                                appendLog(sessionId, "Task Complete: ${action.summary}")
                                 results.add("Task marked complete: ${action.summary}")
                                 isComplete = true
                             }

@@ -21,6 +21,7 @@ import javax.inject.Inject
 @HiltViewModel
 class WorkspaceViewModel @Inject constructor(
     private val workspaceRepository: WorkspaceRepository,
+    private val agentManager: com.openchat.app.agent.AgentManager,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
 
@@ -172,6 +173,10 @@ class WorkspaceViewModel @Inject constructor(
         val exp = (Math.log(bytes.toDouble()) / Math.log(1024.0)).toInt()
         val pre = "KMGTPE"[exp - 1]
         return String.format(java.util.Locale.US, "%.1f %cB", bytes / Math.pow(1024.0, exp.toDouble()), pre)
+    }
+
+    fun getAgentLogs(sessionId: String): StateFlow<String> {
+        return agentManager.getLogs(sessionId)
     }
 
     fun importFileFromDevice(uri: Uri) {

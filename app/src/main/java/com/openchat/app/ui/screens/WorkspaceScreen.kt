@@ -69,11 +69,18 @@ fun WorkspaceScreen(
                             expanded = menuExpanded,
                             onDismissRequest = { menuExpanded = false }
                         ) {
+                            val context = androidx.compose.ui.platform.LocalContext.current
+                            val filePickerLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+                                androidx.activity.result.contract.ActivityResultContracts.GetContent()
+                            ) { uri: android.net.Uri? ->
+                                uri?.let { viewModel.importFileFromDevice(it) }
+                            }
+                            
                             DropdownMenuItem(
                                 text = { Text("Import File") },
                                 onClick = { 
                                     menuExpanded = false 
-                                    // TODO Pick file
+                                    filePickerLauncher.launch("*/*")
                                 },
                                 leadingIcon = { Icon(Icons.Default.UploadFile, contentDescription = null) }
                             )
@@ -81,7 +88,14 @@ fun WorkspaceScreen(
                                 text = { Text("Export ZIP") },
                                 onClick = { 
                                     menuExpanded = false
-                                    viewModel.exportWorkspaceAsZip { uri -> }
+                                    viewModel.exportWorkspaceAsZip { uri -> 
+                                        val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                                            type = "application/zip"
+                                            putExtra(android.content.Intent.EXTRA_STREAM, uri)
+                                            addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                        }
+                                        context.startActivity(android.content.Intent.createChooser(intent, "Export Workspace"))
+                                    }
                                 },
                                 leadingIcon = { Icon(Icons.Default.Download, contentDescription = null) }
                             )
@@ -170,7 +184,8 @@ fun WorkspaceScreen(
                 }
                 } else {
                     // Terminal Tab
-                    AgentTerminalView()
+                    val agentLogs by viewModel.getAgentLogs(sessionId).collectAsState()
+                    AgentTerminalView(logs = agentLogs)
                 }
             }
         }
@@ -400,8 +415,29 @@ fun RecycleBinScreen(
 }
 
 @Composable
-fun AgentTerminalView() {
-    Box(modifier = Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Color.Black).padding(8.dp)) {
-        Text("AI Agent logs & terminal output will stream here.", color = androidx.compose.ui.graphics.Color.Green, style = MaterialTheme.typography.bodySmall, modifier = Modifier.fillMaxWidth())
+fun AgentTerminalView(logs: String) {
+    val scrollState = androidx.compose.foundation.rememberScrollState()
+    
+    // Auto-scroll to bottom when logs change
+    LaunchedEffect(logs) {
+        scrollState.animateScrollTo(scrollState.maxValue)
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(androidx.compose.ui.graphics.Color(0xFF121212))
+            .padding(12.dp)
+            .androidx.compose.foundation.verticalScroll(scrollState)
+    ) {
+        Text(
+            text = logs,
+            color = androidx.compose.ui.graphics.Color(0xFF00FF41),
+            style = MaterialTheme.typography.bodySmall.copy(
+                fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                lineHeight = androidx.compose.ui.unit.TextUnit.Unspecified
+            ),
+            modifier = Modifier.fillMaxWidth()
+        )
     }
 }
