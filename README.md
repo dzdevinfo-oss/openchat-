@@ -51,53 +51,41 @@ The repository is configured with GitHub Actions to automate builds:
 
 ### 6. Pushing Changes from Termux (Mobile)
 
-If you are using Termux to push these changes to GitHub, follow these exact steps to ensure the build fixes are applied and the Gradle wrapper is included:
+If you are using Termux to push these changes to GitHub, follow these exact steps to ensure the build fixes are applied:
 
 1. **Navigate to the project folder:**
    ```bash
    cd /path/to/your/project
    ```
 
-2. **Force-add the Gradle wrapper files** (they are sometimes ignored or missed):
+2. **Fix the local Gradle wrapper (IMPORTANT):**
+   Run these commands to ensure the correct files are present locally:
    ```bash
-   git add -f gradlew gradlew.bat gradle/wrapper/gradle-wrapper.jar gradle/wrapper/gradle-wrapper.properties
+   mkdir -p gradle/wrapper
+   curl -L https://github.com/gradle/gradle/raw/v8.4.0/gradle/wrapper/gradle-wrapper.jar -o gradle/wrapper/gradle-wrapper.jar
+   chmod +x gradlew
    ```
 
-3. **Add everything else:**
+3. **Stage and Push:**
    ```bash
    git add .
-   ```
-
-4. **Check if the files are staged correctly:**
-   ```bash
-   git status
-   ```
-   *You MUST see `new file: gradle/wrapper/gradle-wrapper.jar` in the list.*
-
-5. **Commit and Push:**
-   ```bash
-   git commit -m "Fix: Explicitly include Gradle wrapper Jar and scripts"
-   ```
-   ```bash
+   git add -f gradle/wrapper/gradle-wrapper.jar
+   git add -f app/src/main/res/drawable/ic_launcher_background.xml
+   git add -f app/src/main/res/drawable/ic_launcher_foreground.xml
+   git add -f app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml
+   git add -f app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml
+   git commit -m "Fix: Add missing launcher icons and ensure Gradle wrapper jar"
    git push origin main
    ```
+
+Once pushed, check the **Actions** tab. I have updated the workflow to be more robust, and it should now successfully build the APK.
 
 ### 7. Troubleshooting Build Errors
 
 #### "Could not find or load main class org.gradle.wrapper.GradleWrapperMain"
-This means the `gradle-wrapper.jar` is missing from your GitHub repository.
+This means the `gradle-wrapper.jar` file is missing or corrupted in your repository.
 **Solution:**
-I have updated the GitHub Actions workflow to **automatically download** this file if it is missing during the build. However, for local development, you should still run:
-   ```bash
-   mkdir -p gradle/wrapper
-   curl -L https://github.com/gradle/gradle/raw/v8.4.0/gradle/wrapper/gradle-wrapper.jar -o gradle/wrapper/gradle-wrapper.jar
-   ```
-And remember to push it:
-   ```bash
-   git add -f gradle/wrapper/gradle-wrapper.jar
-   git commit -m "Fix: Explicitly include Gradle wrapper jar"
-   git push origin main
-   ```
+I have switched the GitHub Action to use the official **Setup Gradle** action which is much more reliable. If you see this error locally, simply run the `curl` command in Step 6 above to download a fresh jar.
 
 #### "Minimum supported Gradle version is 8.4. Current version is 7.4.2."
 If you see this error in Android Studio or terminal:
