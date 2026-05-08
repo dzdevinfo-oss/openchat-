@@ -47,11 +47,15 @@ class SettingsViewModel @Inject constructor(
     fun setThinkingBudget(budget: Int) = viewModelScope.launch { settingsManager.setThinkingBudget(budget) }
 
     // Voice
-    val autoReadResponses = settingsManager.enableTts.stateIn(viewModelScope, SharingStarted.Eagerly, false)
+    val enableVoiceInput = settingsManager.enableVoiceInput.stateIn(viewModelScope, SharingStarted.Eagerly, true)
+    val autoSendVoice = settingsManager.autoSendVoice.stateIn(viewModelScope, SharingStarted.Eagerly, false)
+    val enableTts = settingsManager.enableTts.stateIn(viewModelScope, SharingStarted.Eagerly, false)
     val ttsSpeed = settingsManager.ttsSpeed.stateIn(viewModelScope, SharingStarted.Eagerly, 1.0f)
     val ttsPitch = settingsManager.ttsPitch.stateIn(viewModelScope, SharingStarted.Eagerly, 1.0f)
 
-    fun setAutoReadResponses(enabled: Boolean) = viewModelScope.launch { settingsManager.setEnableTts(enabled) }
+    fun setEnableVoiceInput(enabled: Boolean) = viewModelScope.launch { settingsManager.setEnableVoiceInput(enabled) }
+    fun setAutoSendVoice(enabled: Boolean) = viewModelScope.launch { settingsManager.setAutoSendVoice(enabled) }
+    fun setEnableTts(enabled: Boolean) = viewModelScope.launch { settingsManager.setEnableTts(enabled) }
     fun setTtsSpeed(speed: Float) = viewModelScope.launch { settingsManager.setTtsSpeed(speed) }
     fun setTtsPitch(pitch: Float) = viewModelScope.launch { settingsManager.setTtsPitch(pitch) }
 
@@ -189,5 +193,35 @@ class SettingsViewModel @Inject constructor(
 
     fun hasApiKey(providerId: String): Boolean {
         return !providerRepository.getApiKey(providerId).isNullOrBlank()
+    }
+
+    fun getDatabaseSize(): String {
+        val dbFile = settingsManager.context.getDatabasePath("openchat_db")
+        return formatSize(dbFile.length())
+    }
+
+    fun getWorkspaceSize(): String {
+        val workspaceDir = java.io.File(settingsManager.context.filesDir, "workspaces")
+        if (!workspaceDir.exists()) return "0 B"
+        val size = workspaceDir.walkTopDown().filter { it.isFile }.sumOf { it.length() }
+        return formatSize(size)
+    }
+
+    fun exportAllData(): android.net.Uri? = null // Logic to zip everything
+
+    fun importData(uri: android.net.Uri) {}
+
+    fun clearAllHistory() {
+        viewModelScope.launch {
+            // chatRepository.clearAll()
+            // workspaceRepository.clearAll()
+        }
+    }
+
+    private fun formatSize(bytes: Long): String {
+        if (bytes < 1024) return "$bytes B"
+        val exp = (Math.log(bytes.toDouble()) / Math.log(1024.0)).toInt()
+        val pre = "KMGTPE"[exp - 1]
+        return String.format(java.util.Locale.US, "%.1f %cB", bytes / Math.pow(1024.0, exp.toDouble()), pre)
     }
 }

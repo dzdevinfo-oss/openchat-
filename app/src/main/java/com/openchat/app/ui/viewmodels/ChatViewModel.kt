@@ -201,7 +201,7 @@ class ChatViewModel @Inject constructor(
                 launch {
                     try {
                         val titlePrompt = "Give this conversation a short 3-5 word title based on: $finalContent. Just the title."
-                        val title = aiApiRepository.sendMessage(provider, model, listOf(com.openchat.app.data.api.ChatMessage("user", titlePrompt)), session.id)
+                        val title = aiApiRepository.sendMessage(provider, model, listOf(com.openchat.app.data.remote.ChatMessage("user", titlePrompt)), session.id)
                         chatRepository.updateSession(session.copy(title = title.trim().removeSurrounding("\"")))
                     } catch (e: Exception) {
                         chatRepository.updateSession(session.copy(title = finalContent.take(30) + "..."))
@@ -307,7 +307,16 @@ class ChatViewModel @Inject constructor(
         createRegex.findAll(content).forEach { match ->
             val filename = match.groupValues[1].trim()
             if (existingFiles.none { it.fileName == filename }) {
-                workspaceRepository.createFile(com.openchat.app.data.model.WorkspaceFile(sessionId = sessionId, fileName = filename, filePath = "", content = match.groupValues[2], language = filename.substringAfterLast('.', "txt")))
+                workspaceRepository.createFile(
+                    com.openchat.app.data.model.WorkspaceFile(
+                        workspaceId = sessionId, // Using sessionId as workspaceId
+                        sessionId = sessionId,
+                        fileName = filename,
+                        filePath = "",
+                        fileType = filename.substringAfterLast('.', "txt"),
+                        content = match.groupValues[2]
+                    )
+                )
             }
         }
         val editRegex = Regex("```edit:([^\\n]+)\\n([\\s\\S]*?)```")
@@ -333,6 +342,17 @@ class ChatViewModel @Inject constructor(
     fun cancelAgent(sessionId: String) = agentManager.cancelAgent(sessionId)
     fun saveToWorkspace(fileName: String, content: String) {
         val session = _currentSession.value ?: return
-        viewModelScope.launch { workspaceRepository.createFile(com.openchat.app.data.model.WorkspaceFile(sessionId = session.id, fileName = fileName, filePath = "", content = content, language = fileName.substringAfterLast('.', "txt"))) }
+        viewModelScope.launch {
+            workspaceRepository.createFile(
+                com.openchat.app.data.model.WorkspaceFile(
+                    workspaceId = session.id,
+                    sessionId = session.id,
+                    fileName = fileName,
+                    filePath = "",
+                    fileType = fileName.substringAfterLast('.', "txt"),
+                    content = content
+                )
+            )
+        }
     }
 }

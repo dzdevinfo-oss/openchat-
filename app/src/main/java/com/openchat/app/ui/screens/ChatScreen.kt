@@ -27,6 +27,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.material3.SuggestionChip
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.openchat.app.data.model.AiModel
 import com.openchat.app.data.model.Message
@@ -77,7 +79,7 @@ fun ChatScreen(
     LaunchedEffect(messages) {
         val lastMsg = messages.lastOrNull { it.role == "assistant" && !it.isStreaming }
         if (lastMsg != null) {
-            val detected = viewModel.artifactDetector.detect(lastMsg.content)
+            val detected = com.openchat.app.util.ArtifactDetector().detect(lastMsg.content)
             if (detected.isNotEmpty()) {
                 artifacts = detected
                 showArtifactPanel = true

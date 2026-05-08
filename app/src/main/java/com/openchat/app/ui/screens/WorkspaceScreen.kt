@@ -1,5 +1,6 @@
 package com.openchat.app.ui.screens
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -23,9 +24,13 @@ import java.util.Locale
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WorkspaceScreen(
+    sessionId: String,
     viewModel: WorkspaceViewModel = hiltViewModel(),
     onClose: () -> Unit
 ) {
+    LaunchedEffect(sessionId) {
+        viewModel.loadWorkspace(sessionId)
+    }
     val files by viewModel.files.collectAsState()
     val currentlyOpenFile by viewModel.currentlyOpenFile.collectAsState()
 

@@ -158,6 +158,22 @@ class WorkspaceViewModel @Inject constructor(
         }
     }
 
+    fun getWorkspaceSize(): String {
+        val sessionId = _currentSessionId.value ?: return "0 B"
+        val workspaceDir = File(context.filesDir, "workspaces/$sessionId")
+        if (!workspaceDir.exists()) return "0 B"
+        
+        val size = workspaceDir.walkTopDown().filter { it.isFile }.sumOf { it.length() }
+        return formatSize(size)
+    }
+
+    private fun formatSize(bytes: Long): String {
+        if (bytes < 1024) return "$bytes B"
+        val exp = (Math.log(bytes.toDouble()) / Math.log(1024.0)).toInt()
+        val pre = "KMGTPE"[exp - 1]
+        return String.format(java.util.Locale.US, "%.1f %cB", bytes / Math.pow(1024.0, exp.toDouble()), pre)
+    }
+
     fun importFileFromDevice(uri: Uri) {
         val sessionId = _currentSessionId.value ?: return
         viewModelScope.launch {

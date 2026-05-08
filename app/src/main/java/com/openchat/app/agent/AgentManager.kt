@@ -8,7 +8,7 @@ import com.openchat.app.data.model.ApiProvider
 import com.openchat.app.data.model.Message
 import com.openchat.app.data.model.WorkspaceFile
 import com.openchat.app.data.repository.AiApiRepository
-import com.openchat.app.data.repository.SessionRepository
+import com.openchat.app.data.repository.ChatRepository
 import com.openchat.app.data.repository.WorkspaceRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
@@ -37,7 +37,7 @@ class AgentManager @Inject constructor(
     private val workspaceRepository: WorkspaceRepository,
     private val terminalExecutor: TerminalExecutor,
     private val actionParser: ActionParser,
-    private val sessionRepository: SessionRepository,
+    private val chatRepository: ChatRepository,
     @ApplicationContext private val context: Context
 ) {
     private val activeJobs = ConcurrentHashMap<String, AgentJobInfo>()
@@ -58,7 +58,7 @@ class AgentManager @Inject constructor(
                 // Add task to messages
                 val sessionMessages = mutableListOf<Message>()
                 val initialMsg = Message(sessionId = sessionId, role = "user", content = task)
-                sessionRepository.insertMessage(initialMsg)
+                chatRepository.insertMessage(initialMsg)
                 sessionMessages.add(initialMsg)
 
                 while (currentIteration < 20 && !isComplete) {
@@ -68,10 +68,11 @@ class AgentManager @Inject constructor(
                     var errorMessage: Throwable? = null
 
                     // Blocking call for stream to complete
+                    val chatMsgs = sessionMessages.map { com.openchat.app.data.remote.ChatMessage(it.role, it.content) }
                     aiApiRepository.sendStreamingMessage(
                         provider = provider,
                         model = model,
-                        messages = sessionMessages,
+                        chatMessages = chatMsgs,
                         systemPrompt = "You are an autonomous agent. Accomplish the user's task. Output actions in strictly formatted Markdown blocks like ```action:create_file\\n{\"name\":\"file.ext\",\"content\":\"...\"}```. Other actions: edit_file, terminal, task_complete. Keep non-action thinking concise.",
                         sessionId = sessionId,
                         onToken = { token -> aiResponse += token },
@@ -86,7 +87,7 @@ class AgentManager @Inject constructor(
 
                     // Save AI response
                     val aiMessage = Message(sessionId = sessionId, role = "assistant", content = aiResponse)
-                    sessionRepository.insertMessage(aiMessage)
+                    chatRepository.insertMessage(aiMessage)
                     sessionMessages.add(aiMessage)
 
                     val actions = actionParser.parse(aiResponse)
@@ -104,11 +105,12 @@ class AgentManager @Inject constructor(
                         when (action) {
                             is Action.CreateFile -> {
                                 val file = WorkspaceFile(
+                                    workspaceId = sessionId,
                                     sessionId = sessionId,
                                     fileName = action.name,
                                     filePath = "${context.filesDir}/workspace/$sessionId/${action.name}",
                                     content = action.content,
-                                    language = action.name.substringAfterLast('.', "txt")
+                                    fileType = action.name.substringAfterLast('.', "txt")
                                 )
                                 workspaceRepository.createFile(file)
                                 results.add("File ${action.name} created successfully.")
@@ -140,7 +142,7 @@ class AgentManager @Inject constructor(
 
                     if (!isComplete) {
                         val resultMsg = Message(sessionId = sessionId, role = "system", content = "Action results:\n" + results.joinToString("\n"))
-                        sessionRepository.insertMessage(resultMsg)
+                        chatRepository.insertMessage(resultMsg)
                         sessionMessages.add(resultMsg)
                     }
                 }

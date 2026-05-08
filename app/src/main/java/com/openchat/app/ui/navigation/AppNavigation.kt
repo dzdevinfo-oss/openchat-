@@ -79,10 +79,7 @@ fun AppNavigation(
             val sessionId = backStackEntry.arguments?.getString("sessionId") ?: ""
             WorkspaceScreen(
                 sessionId = sessionId,
-                onBack = { navController.popBackStack() },
-                onOpenFile = { fileId ->
-                    navController.navigate(Screen.FileEditor.createRoute(sessionId, fileId))
-                }
+                onClose = { navController.popBackStack() }
             )
         }
 
@@ -92,18 +89,6 @@ fun AppNavigation(
             exitTransition = { slideOutVertically(targetOffsetY = { it }, animationSpec = tween(300)) }
         ) {
             SettingsScreen(onBack = { navController.popBackStack() })
-        }
-
-        composable(
-            route = Screen.FileEditor.route,
-            arguments = listOf(
-                navArgument("sessionId") { type = NavType.StringType },
-                navArgument("fileId") { type = NavType.StringType }
-            ),
-            enterTransition = { scaleIn(initialScale = 0.9f, animationSpec = spring()) + fadeIn() },
-            exitTransition = { scaleOut(targetScale = 0.9f) + fadeOut() }
-        ) {
-            FileEditorScreen(onBack = { navController.popBackStack() })
         }
     }
 }

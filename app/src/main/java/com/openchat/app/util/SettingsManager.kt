@@ -13,7 +13,7 @@ private val Context.appSettingsDataStore by preferencesDataStore(name = "opencha
 
 @Singleton
 class SettingsManager @Inject constructor(
-    @ApplicationContext private val context: Context
+    @ApplicationContext val context: Context
 ) {
     // Appearance
     private val darkThemeKey = booleanPreferencesKey("dark_theme")

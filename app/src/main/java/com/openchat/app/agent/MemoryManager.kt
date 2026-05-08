@@ -57,7 +57,7 @@ class MemoryManager @Inject constructor(
 
     suspend fun injectMemories(systemPrompt: String): String {
         return withContext(Dispatchers.IO) {
-            val enabled = kotlinx.coroutines.flow.first(isMemoryEnabled)
+            val enabled = isMemoryEnabled.first()
             if (!enabled) return@withContext systemPrompt
             
             val memories = memoryDao.getGlobal().first()
@@ -77,7 +77,7 @@ class MemoryManager @Inject constructor(
     ) {
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                val enabled = kotlinx.coroutines.flow.first(isMemoryEnabled)
+                val enabled = isMemoryEnabled.first()
                 if (!enabled) return@launch
                 
                 // Only take last 3 messages

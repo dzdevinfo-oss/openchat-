@@ -94,4 +94,27 @@ class AiApiRepository @Inject constructor(
             onError(e)
         }
     }
+
+    suspend fun sendMessage(
+        provider: ApiProvider,
+        model: AiModel,
+        messages: List<ChatMessage>,
+        sessionId: String
+    ): String = withContext(Dispatchers.IO) {
+        val apiKey = providerRepository.getApiKey(provider.id) ?: throw Exception("API key not found")
+        val service = RetrofitBuilder.build(provider.baseUrl, apiKey)
+
+        val request = ChatRequest(
+            model = model.modelId,
+            messages = messages,
+            stream = false
+        )
+
+        val response = service.chatCompletions(request)
+        if (response.isSuccessful) {
+            response.body()?.choices?.firstOrNull()?.message?.content ?: throw Exception("Empty response")
+        } else {
+            throw Exception("API Error: ${response.code()}")
+        }
+    }
 }

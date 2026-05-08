@@ -40,7 +40,8 @@ fun InputBar(
     onSendMessage: (String, List<Uri>) -> Unit,
     onStopStreaming: () -> Unit,
     voiceInputManager: VoiceInputManager,
-    supportsVision: Boolean
+    supportsVision: Boolean,
+    enabled: Boolean = true
 ) {
     var text by remember { mutableStateOf("") }
     val attachedUris = remember { mutableStateListOf<Uri>() }
@@ -51,10 +52,10 @@ fun InputBar(
     val finalTranscript by voiceInputManager.finalTranscript.collectAsState()
 
     LaunchedEffect(partialTranscript) {
-        if (partialTranscript.isNotBlank()) text = partialTranscript
+        if (partialTranscript.isNotBlank() && enabled) text = partialTranscript
     }
     LaunchedEffect(finalTranscript) {
-        if (finalTranscript.isNotBlank()) {
+        if (finalTranscript.isNotBlank() && enabled) {
             text = finalTranscript
         }
     }
@@ -110,11 +111,11 @@ fun InputBar(
                     .background(MaterialTheme.colorScheme.surfaceVariant)
                     .padding(horizontal = 8.dp, vertical = 8.dp)
             ) {
-                IconButton(onClick = { filePicker.launch("*/*") }) {
-                    Icon(Icons.Default.AttachFile, contentDescription = "Attach File", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                IconButton(onClick = { if (enabled) filePicker.launch("*/*") }) {
+                    Icon(Icons.Default.AttachFile, contentDescription = "Attach File", tint = if (enabled) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f))
                 }
-                IconButton(onClick = { if (attachedUris.size < 5) imagePicker.launch("image/*") }) {
-                    Icon(Icons.Default.Image, contentDescription = "Attach Image", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                IconButton(onClick = { if (enabled && attachedUris.size < 5) imagePicker.launch("image/*") }) {
+                    Icon(Icons.Default.Image, contentDescription = "Attach Image", tint = if (enabled) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f))
                 }
                 
                 Box(modifier = Modifier.weight(1f).padding(bottom = 12.dp, top = 12.dp)) {
@@ -125,11 +126,12 @@ fun InputBar(
                     }
                     BasicTextField(
                         value = text,
-                        onValueChange = { text = it },
-                        textStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface),
+                        onValueChange = { if (enabled) text = it },
+                        textStyle = MaterialTheme.typography.bodyLarge.copy(color = if (enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)),
                         cursorBrush = SolidColor(PrimaryTeal),
                         modifier = Modifier.fillMaxWidth(),
-                        maxLines = 5
+                        maxLines = 5,
+                        enabled = enabled
                     )
                 }
                 
@@ -146,7 +148,8 @@ fun InputBar(
                             attachedUris.clear()
                         },
                         colors = IconButtonDefaults.iconButtonColors(containerColor = PrimaryTeal, contentColor = Color.White),
-                        modifier = Modifier.clip(CircleShape)
+                        modifier = Modifier.clip(CircleShape),
+                        enabled = enabled
                     ) {
                         Icon(Icons.Default.Send, contentDescription = "Send", modifier = Modifier.size(18.dp))
                     }
@@ -163,15 +166,17 @@ fun InputBar(
 
                     IconButton(
                         onClick = {
-                            if (isListening) voiceInputManager.stopListening()
-                            else voiceInputManager.startListening()
+                            if (enabled) {
+                                if (isListening) voiceInputManager.stopListening()
+                                else voiceInputManager.startListening()
+                            }
                         },
                         modifier = Modifier.scale(scale)
                     ) {
                         Icon(
                             Icons.Default.Mic,
                             contentDescription = "Voice",
-                            tint = if (isListening) PrimaryTeal else MaterialTheme.colorScheme.onSurfaceVariant
+                            tint = if (enabled && isListening) PrimaryTeal else MaterialTheme.colorScheme.onSurfaceVariant.let { if (enabled) it else it.copy(alpha = 0.3f) }
                         )
                     }
                 }

@@ -4,6 +4,11 @@ import android.net.Uri
 import androidx.compose.animation.*
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.RepeatMode
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -32,6 +37,9 @@ import androidx.compose.ui.viewinterop.AndroidView
 import coil.compose.AsyncImage
 import com.openchat.app.data.model.Message
 import com.openchat.app.ui.theme.PrimaryTeal
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import org.json.JSONArray
 import com.openchat.app.util.MessageChunker
 import com.openchat.app.util.MessageChunk
@@ -102,7 +110,7 @@ fun TypingIndicator() {
     )
 
     Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-        scales.forEach { scale ->
+        for (scale in scales) {
             Box(
                 modifier = Modifier
                     .size(8.dp)
