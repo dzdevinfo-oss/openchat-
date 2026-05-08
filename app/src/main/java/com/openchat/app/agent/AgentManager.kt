@@ -94,7 +94,7 @@ class AgentManager @Inject constructor(
                     if (actions.isEmpty()) {
                         // AI didn't format an action, prompt it again
                         val nudgeMsg = Message(sessionId = sessionId, role = "user", content = "No valid actions found in your response. Please formulate your action using the action markdown blocks, or use [TASK_COMPLETE] if done.")
-                        sessionRepository.insertMessage(nudgeMsg)
+                        chatRepository.insertMessage(nudgeMsg)
                         sessionMessages.add(nudgeMsg)
                         continue
                     }

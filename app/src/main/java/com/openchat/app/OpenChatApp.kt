@@ -2,6 +2,9 @@ package com.openchat.app
 
 import android.app.Application
 import android.util.Log
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.os.Build
 import com.openchat.app.util.DatabaseSeeder
 import dagger.hilt.android.HiltAndroidApp
 import kotlinx.coroutines.CoroutineExceptionHandler
@@ -18,6 +21,7 @@ class OpenChatApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        createNotificationChannels()
         setupGlobalExceptionHandler()
         
         // Seed built-in providers and models
@@ -35,6 +39,20 @@ class OpenChatApp : Application() {
         
         GlobalScope.launch(handler) {
             // Keep handler attached to an active scope to prevent silent crashes
+        }
+    }
+
+    private fun createNotificationChannels() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val name = "Agent Status"
+            val descriptionText = "Notifications about autonomous agent progress"
+            val importance = NotificationManager.IMPORTANCE_DEFAULT
+            val channel = NotificationChannel("agent_channel", name, importance).apply {
+                description = descriptionText
+            }
+            val notificationManager: NotificationManager =
+                getSystemService(NotificationManager::class.java)
+            notificationManager.createNotificationChannel(channel)
         }
     }
 }
